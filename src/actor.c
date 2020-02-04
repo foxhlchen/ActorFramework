@@ -7,15 +7,32 @@ static void* actor_run(void* param)
         return;
 
     actor_ctl_blk* ctlblk = (actor_ctl_blk*) param;
+    ctlblk->status = ACTOR_S_RUN;
     ctlblk->actor_hdl.func(&ctlblk->actor_hdl, ctlblk->actor_hdl.func_args);
 
     return NULL;
 }
 
+actor_msg_t actor_make_msg(actor_msg_type_t msgtype) {
+    actor_msg_t newmsg = (actor_msg_t) ACTOR_MM_ALOC(sizeof(struct _opaque_actor_msg_t));
+    memset(newmsg, 0, sizeof(struct _opaque_actor_msg_t));
+
+    newmsg->msg_type = msgtype;
+    return newmsg;
+}
+
+void actor_despose_msg(actor_msg_t msg) {
+    if (msg)
+        ACTOR_MM_FREE(msg);
+}
+
 actor_t spawn_actor(actor_func actor, void* args) 
 {
     actor_ctl_blk* new_actor_ctl = (actor_ctl_blk*) ACTOR_MM_ALOC(sizeof(actor_ctl_blk));
-    new_actor_ctl->status = ACTOR_S_INVALID;
+    memset(new_actor_ctl, 0, sizeof(actor_ctl_blk));
+
+    new_actor_ctl->status = ACTOR_S_CREATED;
+    new_actor_ctl->headmsg = NULL;
     new_actor_ctl->actor_hdl.actor_id = (long) new_actor_ctl;
     new_actor_ctl->actor_hdl.func = actor;
     new_actor_ctl->actor_hdl.func_args = args;
@@ -40,29 +57,49 @@ actor_t spawn_actor(actor_func actor, void* args)
 actor_msg_t actor_receive(actor_t actor) 
 {
     actor_ctl_blk* ctlblk = (actor_ctl_blk*) actor;
+    actor_msg_t recvmsg = NULL;
 
     pthread_mutex_lock(&ctlblk->mtx);
-    pthread_cond_wait(&ctlblk->cv, &ctlblk->mtx);
 
-    // TODO heck Msg
+    while (!ctlblk->headmsg)
+    {
+        pthread_cond_wait(&ctlblk->cv, &ctlblk->mtx);
+    }
+
+    // remove from actor's mailbox
+    recvmsg = ctlblk->headmsg;
+    ctlblk->headmsg = recvmsg->next;
+    recvmsg->next = NULL;
 
     pthread_mutex_unlock(&ctlblk->mtx);
+
+    return recvmsg;
 }
 
 actor_msg_t actor_receive_timewait(actor_t actor, unsigned sec) 
 {
     actor_ctl_blk* ctlblk = (actor_ctl_blk*) actor;
+    actor_msg_t recvmsg = NULL;
 
     pthread_mutex_lock(&ctlblk->mtx);
 
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    ts.tv_sec += sec;
-    pthread_cond_timewait(&ctlblk->cv, &ctlblk->mtx, &ts);
+    if (!ctlblk->headmsg) {
+        struct timespec ts;
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_sec += sec;
+        pthread_cond_timewait(&ctlblk->cv, &ctlblk->mtx, &ts);
+    }
 
-    // TODO Check Msg
+    if (ctlblk->headmsg) {
+        // remove from actor's mailbox
+        recvmsg = ctlblk->headmsg;
+        ctlblk->headmsg = recvmsg->next;
+        recvmsg->next = NULL;
+    }
 
     pthread_mutex_unlock(&ctlblk->mtx);
+
+    return recvmsg;
 }
 
 
@@ -75,7 +112,13 @@ int actor_send(actor_t actor, actor_msg_t* msg)
 
     pthread_mutex_lock(&ctlblk->mtx);
 
-    // TODO Send Msg
+    actor_msg_t* prev = &ctlblk->headmsg;
+    while (*prev) {
+        actor_msg_t next = *prev;
+        prev = &next->next;
+    }
+    *prev = *msg;
+    msg = NULL; // msg has delivered, msg's ownership has been transfered to target actor's mailbox. reset src pointer to NULL.
 
     pthread_cond_signal(&ctlblk->cv);
     pthread_mutex_unlock(&ctlblk->mtx);

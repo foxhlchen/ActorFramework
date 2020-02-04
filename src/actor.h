@@ -37,7 +37,7 @@ typedef struct {
 
 	pthread_cond_t cv;
 	pthread_mutex_t mtx;
-	// TODO actor_mailbox;
+	actor_msg_t headmsg;
 
 } actor_ctl_blk;
 
@@ -45,6 +45,8 @@ typedef struct {
 extern actor_t spawn_actor(actor_func actor, void* args);
 
 extern actor_msg_t actor_make_msg(actor_msg_type_t msgtype);
+
+extern void actor_despose_msg(actor_msg_t msg);
 
 // Note: after being called, msg will set to NULL to prevent reuse
 extern int actor_send(actor_t actor, actor_msg_t* msg);
