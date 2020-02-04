@@ -25,6 +25,9 @@ typedef struct _opaque_actor_t {
 	actor_func func;
 	void* func_args;
 
+	// automatically destroy actor itself when actor function exits.
+	int self_destroy;
+
 } *actor_t;
 
 // actor control block
@@ -46,7 +49,7 @@ extern actor_t spawn_actor(actor_func actor, void* args);
 
 extern actor_msg_t actor_make_msg(actor_msg_type_t msgtype);
 
-extern void actor_despose_msg(actor_msg_t msg);
+extern void actor_dispose_msg(actor_msg_t msg);
 
 // Note: after being called, msg will set to NULL to prevent reuse
 extern int actor_send(actor_t actor, actor_msg_t* msg);

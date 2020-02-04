@@ -9,6 +9,11 @@ static void* actor_run(void* param)
     actor_ctl_blk* ctlblk = (actor_ctl_blk*) param;
     ctlblk->status = ACTOR_S_RUN;
     ctlblk->actor_hdl.func(&ctlblk->actor_hdl, ctlblk->actor_hdl.func_args);
+    ctlblk->status = ACTOR_S_STOP;
+
+    if (ctlblk->actor_hdl.self_destroy) {
+        actor_destory(&ctlblk->actor_hdl);
+    }
 
     return NULL;
 }
@@ -21,7 +26,7 @@ actor_msg_t actor_make_msg(actor_msg_type_t msgtype) {
     return newmsg;
 }
 
-void actor_despose_msg(actor_msg_t msg) {
+void actor_dispose_msg(actor_msg_t msg) {
     if (msg)
         ACTOR_MM_FREE(msg);
 }
@@ -127,5 +132,8 @@ int actor_send(actor_t actor, actor_msg_t* msg)
 
 void actor_destory(actor_t actor)
 {
+    if (! actor)
+        return;
 
+    ACTOR_MM_FREE(actor);
 }
