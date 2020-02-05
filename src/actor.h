@@ -4,6 +4,8 @@
 
 #include "actor_msg.h"
 #include <pthread.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define ACTOR_MM_ALOC malloc
 #define ACTOR_MM_FREE free

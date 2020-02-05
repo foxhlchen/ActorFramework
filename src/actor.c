@@ -1,10 +1,11 @@
 #include "actor.h"
 #include <time.h>
+#include <pthread.h>
 
 static void* actor_run(void* param) 
 {
     if (! param)
-        return;
+        return NULL;
 
     actor_ctl_blk* ctlblk = (actor_ctl_blk*) param;
     ctlblk->status = ACTOR_S_RUN;
@@ -42,7 +43,7 @@ actor_t spawn_actor(actor_func actor, void* args)
     new_actor_ctl->actor_hdl.func = actor;
     new_actor_ctl->actor_hdl.func_args = args;
 
-    pthread_condattr_init(&new_actor_ctl->cv);
+    pthread_cond_init(&new_actor_ctl->cv, NULL);
     int err = pthread_create(& new_actor_ctl->actor_thread, NULL, actor_run, (void*) new_actor_ctl);
     if (err != 0) {
         ACTOR_MM_FREE(new_actor_ctl);
@@ -92,7 +93,7 @@ actor_msg_t actor_receive_timewait(actor_t actor, unsigned sec)
         struct timespec ts;
         clock_gettime(CLOCK_REALTIME, &ts);
         ts.tv_sec += sec;
-        pthread_cond_timewait(&ctlblk->cv, &ctlblk->mtx, &ts);
+        pthread_cond_timedwait(&ctlblk->cv, &ctlblk->mtx, &ts);
     }
 
     if (ctlblk->headmsg) {
@@ -112,7 +113,7 @@ int actor_send(actor_t actor, actor_msg_t* msg)
 {
     actor_ctl_blk* ctlblk = (actor_ctl_blk*) actor;
     if (! ctlblk || ctlblk->status != ACTOR_S_RUN) {
-        return;
+        return -1;
     }
 
     pthread_mutex_lock(&ctlblk->mtx);
@@ -128,6 +129,7 @@ int actor_send(actor_t actor, actor_msg_t* msg)
     pthread_cond_signal(&ctlblk->cv);
     pthread_mutex_unlock(&ctlblk->mtx);
 
+    return 0;
 }
 
 void actor_destory(actor_t actor)

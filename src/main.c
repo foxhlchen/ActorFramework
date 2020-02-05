@@ -1,11 +1,12 @@
 #include "actor.h"
 #include "stdio.h"
+#include <unistd.h>
 
 void actor_foo_func(actor_t self, void* args)
 {
     actor_msg_t msg = actor_receive(self);
     
-    printf("Recv: %d", msg->msg_type);
+    printf("Recv: %ld", msg->msg_type);
     
     actor_dispose_msg(msg);
 
@@ -23,7 +24,7 @@ int main(int argc, char const *argv[])
 
     actor_send(actor_foo, &msg);
 
-    
+    sleep(5);
 
     return 0;
 }

@@ -11,5 +11,5 @@ typedef struct _opaque_actor_msg_t {
     actor_msg_type_t msg_type;
     void* payload;
     actor_t sender;
-    actor_msg_t next;
+    struct _opaque_actor_msg_t* next;
 } *actor_msg_t;
