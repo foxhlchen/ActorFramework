@@ -8,13 +8,13 @@ Download and put files into your project
 
 ## Usage
 
-Include the header
+Include the header:
 
 ```c
 #include "actor.h"
 ```
 
-Define your actor
+Define your actor:
 
 ```c
 void my_actor_func(actor_t self, void* args)
@@ -31,13 +31,13 @@ void my_actor_func(actor_t self, void* args)
     return;
 }
 ```
-Spawn your actor
+Spawn your actor:
 
 ```c
     actor_t my_actor = spawn_actor(my_actor_func, NULL);
 ```
 
-Send msg to actor
+Send msg to actor:
 
 ```c
     actor_msg_t msg = actor_make_msg(MY_MSG_TYPE);
