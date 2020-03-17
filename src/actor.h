@@ -10,6 +10,11 @@
 #define ACTOR_MM_ALOC malloc
 #define ACTOR_MM_FREE free
 
+#define ACTOR_LOOP_START for (;;) {\
+        actor_msg_t msg = actor_receive(self);
+
+#define ACTOR_LOOP_END }
+
 enum ACTOR_STATUS {
 	ACTOR_S_INVALID = 0x0,
 	ACTOR_S_CREATED = 0x11,
